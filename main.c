@@ -22,3 +22,7 @@ int cd_command(char **args) {
     }
     return 0;
 }
+
+int clr_command() {
+    printf("\033[H\033[2J");    //ANSI terminal control escape sequences
+}
