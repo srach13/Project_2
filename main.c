@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
@@ -46,5 +47,39 @@ int dir_command(char **args) {
 int environ_command() {
     for (int i = 0; environ[i] != NULL; i++)    //iterate through & print out all the environ strings
         printf("%s\n", environ[i]);
+    return 0;
+}
+
+int echo_command(char **args) {
+    int i = 1;
+    while(args[i] != NULL) {    //iterate through array strings and print
+        printf("%s ", args[i]);
+        i++;    //increment counter variable
+    }
+    printf("%s", "\n"); //separate next command prompt with new line character
+}
+
+int help_command() {
+    char *manual[] = {"more", "readme", NULL};
+    return processLaunch(manual);
+}
+
+int pause_command() {
+    printf("Shell has been paused. Press 'Enter' to continue");
+    char c = getchar();
+    while(c != '\n') {  //wait for user to press enter
+        c = getchar();
+    }
+    return 0;
+}
+
+int quit(char *command) {
+    if(strcmp(command, "quit") == 0) {
+        return 0;
+    } else if(strcmp(command, "QUIT") == 0) {
+        return 0;
+    } else {
+        return 1;
+    }
 }
 
