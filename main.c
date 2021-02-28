@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <dirent.h>
 
+extern char **environ;
 char error_message[30] = "An error has occurred\n";
 
 int main() {
@@ -26,3 +28,23 @@ int cd_command(char **args) {
 int clr_command() {
     printf("\033[H\033[2J");    //ANSI terminal control escape sequences
 }
+
+int dir_command(char **args) {
+    DIR *directory;
+    struct dirent *reader;
+    directory = opendir("./");  //opens current directory
+    if (directory != NULL) {
+        while ((reader = readdir(directory)))   //reads through contents in current directory
+            puts(reader->d_name);   //prints directory
+        (void) closedir(directory); //closes directory
+    } else {    //handles displaying directory error
+        write(STDERR_FILENO, error_message, strlen(error_message));
+    }
+    return 0;
+}
+
+int environ_command() {
+    for (int i = 0; environ[i] != NULL; i++)    //iterate through & print out all the environ strings
+        printf("%s\n", environ[i]);
+}
+
