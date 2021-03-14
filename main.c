@@ -413,7 +413,8 @@ void run_pipe(char* left[ARGUMENT_SIZE], char* right[ARGUMENT_SIZE], int isBackg
     pid = fork(); //fork process
 
     if (pid < 0) { //handle forking error
-        write(STDERR_FILENO, error_message, strlen(error_message));        exit(1);
+        write(STDERR_FILENO, error_message, strlen(error_message));
+        exit(1);
     }
 
     if (pid == 0) { //child process 1
@@ -422,37 +423,27 @@ void run_pipe(char* left[ARGUMENT_SIZE], char* right[ARGUMENT_SIZE], int isBackg
 
         if (check_internal(left) == 1) { //check for internal
             run_internal_command(left); //run internal
-        }
-
-        else { //not internal
+        } else { //not internal
             if (execvp(left[0], left) < 0) { //handle executing error
                 write(STDERR_FILENO, error_message, strlen(error_message));
             }
         }
-    }
-
-    else { //parent process
+    } else { //parent process
         pid2 = fork();
         if (pid2 < 0) { //handle forking error
             write(STDERR_FILENO, error_message, strlen(error_message));
-        }
-
-        else if (pid2 == 0) { //child process 2
+        } else if (pid2 == 0) { //child process 2
             dup2(fd[0], STDIN_FILENO); //dup read end
             close(fd[1]); //close write end
 
             if (check_internal(right) == 1) { //check for internal
                 run_internal_command(right); //run internal
-            }
-
-            else { //not internal
+            } else { //not internal
                 if (execvp(right[0], right) < 0) { //handle executing error
                     write(STDERR_FILENO, error_message, strlen(error_message));
                 }
             }
-        }
-
-        else if (pid2 > 0 && isBackground == 0) { //parent process with no background
+        } else if (pid2 > 0 && isBackground == 0) { //parent process with no background
             close(fd[0]); //close read
             close(fd[1]); //close write
             waitpid(pid, NULL, 0); //wait for child process 1 to finish
@@ -460,4 +451,5 @@ void run_pipe(char* left[ARGUMENT_SIZE], char* right[ARGUMENT_SIZE], int isBackg
         }
     }
 }
+
 
