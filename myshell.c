@@ -91,7 +91,7 @@ void print_cwd() {
 
     if (getcwd(cwd, sizeof(cwd)) != NULL) {
         gethostname(host, ARGUMENT_SIZE); //save host name to array
-        printf("%s%s~>", host, cwd); //print host name & cwd
+        printf("myshell>", host, cwd); //print host name & cwd
     }
 
     else {  //handle error
