@@ -1,3 +1,4 @@
+//HEADERS
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -6,15 +7,22 @@
 #include <stdbool.h>
 #include <fcntl.h>
 
+//DECLARATIONS
 #define ARGUMENT_SIZE 1024 //size of input buffer
 #define COMMAND_SIZE 7 //internal commands
 
+//GLOBAL VARIABLES
 extern char **environ; //environ variable
 char error_message[30] = "An error has occurred\n"; //error message
 int length; //keeps track of actual size of input
 
-void parse_line(char *line, char* argv[ARGUMENT_SIZE]); //parses input into string tokens
-int launch_process(char **args); //launches each process
+//FUNCTIONS FOR HANDLING INPUT & USER COMMANDS
+void print_cwd();   //prints current working directory
+char *read_input();   //reads input
+void parse_input(char *line, char* argv[ARGUMENT_SIZE]); //parses input into string tokens
+int launch_process(char *line); //launches process
+
+//FUNCTIONS FOR BUILT IN COMMANDS
 int cd_command(char **args); //changes directory
 int clr_command(); //clears screen
 int dir_command(char **args); //lists contents of directory
@@ -25,7 +33,8 @@ int pause_command(); //pauses shell
 int quit(char *command); //quits shell
 int shell_environment(char **args); //contains full path for shell executable
 
-pid_t Fork(void); //forks process
+//FUNCTIONS FOR FORKING, REDIRECTING, PIPING
+void forkProgram(char* argv[ARGUMENT_SIZE], int isBackground); //forks program
 void redirect(char* argv[ARGUMENT_SIZE], int flag, int i); //redirects input
 int check_redirect(char* argv[ARGUMENT_SIZE], int isBackground); //checks whether the input needs to be redirected
 int check_pipe(char* argv[ARGUMENT_SIZE], char* left[ARGUMENT_SIZE], char* right[ARGUMENT_SIZE]); //checks whether the input has a pipe
@@ -33,13 +42,79 @@ void run_pipe(char* left[ARGUMENT_SIZE], char* right[ARGUMENT_SIZE], int isBackg
 int check_internal(char* argv[]); //checks whether the input has an internal command
 int run_internal_command(char* argv[ARGUMENT_SIZE]); //runs the internal commands
 
-int main() {
-    printf("Hello, World!\n");
-    return 0;
+/*
+ *
+ */
+
+//MAIN FUNCTION THAT WILL RUN WHILE LOOP TO TAKE & HANDLE COMMANDS
+int main(int argc, char* argv[]) {
+
+    if (argc > 1) { //command is for batch file
+
+        char *cmd_file[] = {"batch.txt"};
+        char input[ARGUMENT_SIZE];
+        char *line;
+
+        FILE *fp = fopen(cmd_file[0], "r"); //open batch file to read
+
+        while (fgets(input, sizeof(input), fp) != NULL) {   //read each line from file
+            line = input;   //set input to line read
+            launch_process(line);   //pass line to launch_process function
+        }
+
+        fclose(fp);
+    }
+
+    else {  //read command from user
+
+        char *line_to_read; //user input
+        system("clear");
+
+        while (1) { //endless loop
+            print_cwd();    //call function to print cwd
+            line_to_read = read_input(); //read input from user
+
+            if (strcmp(line_to_read, "quit\n") == 0 || feof(stdin)) {   //restrict while loop
+                return EXIT_SUCCESS;
+            }
+
+            launch_process(line_to_read);   //pass input to launch_process function
+        }
+    }
+}
+
+//PRINT CURRENT WORKING DIRECTORY
+void print_cwd() {
+
+    char host[ARGUMENT_SIZE]; //hold host name
+    char cwd[1024]; //hold cwd
+
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        gethostname(host, ARGUMENT_SIZE); //save host name to array
+        printf("%s%s~>", host, cwd); //print host name & cwd
+    }
+
+    else {  //handle error
+        write(STDERR_FILENO, error_message, strlen(error_message));
+    }
+
+}
+
+//READ INPUT
+char *read_input() {
+
+    char input[ARGUMENT_SIZE]; //hold input
+    char *line; //read input
+
+    fgets(input, sizeof(input), stdin);
+    line = input; //save input to line variable
+
+    return line;
+
 }
 
 //PARSE INPUT INTO STRING TOKENS
-void parse_line(char *line, char* argv[ARGUMENT_SIZE]) {
+void parse_input(char *line, char* argv[ARGUMENT_SIZE]) {
 
     char* token;
     const char t[] = {" \n"}; //separate the input
@@ -58,42 +133,48 @@ void parse_line(char *line, char* argv[ARGUMENT_SIZE]) {
     length = counter - 1; //keep track of the actual length of the array
 }
 
-//LAUNCH EACH PROCESS
-int launch_process(char **args) {
+//LAUNCH EACH COMMAND'S PROCESS
+int launch_process(char *line) {
 
-    pid_t pid, wpid;
-    int status;
-    int flag = false;
+    char *argv[ARGUMENT_SIZE]; //hold input
+    int isBackground = 0; //check if input has a & to see if it needs to be ran in background
 
-    char processName[strlen(args[0])];
-    memset(processName, '\0', sizeof(processName));
+    parse_input(line, argv); //split input into strings
 
-    if (args[0][strlen(args[0])-1] == '&') {
-        strncpy(processName, args[0], strlen(args[0]) - 1);
-        flag = true;
-
-    } else {
-        strcpy(processName,args[0]);
+    if (strcmp(argv[length - 1], "&") == 0) { //check if input array has a &
+        isBackground = 1; //set to true
+        argv[length - 1] = NULL; //delete the & from the input
     }
 
-    if ((pid = Fork()) == 0) {
-        if (execvp(processName, args) < 0) {
-            write(STDERR_FILENO, error_message, strlen(error_message));
-            exit(EXIT_FAILURE);
-        }
+    int t = check_redirect(argv, isBackground); //call check_redirect function
 
-        exit(-1);
-
-    } else {
-        if (!flag) {
-            do {
-                wpid = waitpid(pid, &status, WUNTRACED);
-            } while (!WIFEXITED(status) && !WIFSIGNALED(status));
-        }
+    if (t == 2)  { //if check_redirect token, return pipe flag
+        return 1;
     }
 
-    return 1;
+    if (t == 0)  { //if no redirect tokens
+
+        if (argv[0] == NULL) { //if no inputs
+            return 0;
+        }
+
+        if (check_internal(argv) == 1)  { //if internal command
+            run_internal_command(argv); //call function to run internal command
+
+        } else { //exec as fork
+            fork();
+            return 1;
+        }
+
+        return 1;
+    }
+
+    return 0;
 }
+
+/*
+ *
+ */
 
 //CHANGE DIRECTORY
 int cd_command(char **args) {
@@ -163,11 +244,12 @@ int echo_command(char **args) {
 //DISPLAY USER MANUAL
 int help_command() {
     char *manual[] = {"more", "readme", NULL};
-    return launch_process(manual);
+    return launch_process((char *) manual);
 }
 
 //PAUSE SHELL UNTIL THE USER PRESSES ENTER
 int pause_command() {
+
     printf("Shell has been paused. Press 'Enter' to continue");
     char c = getchar();
     while (c != '\n') { //wait for user to press enter
@@ -197,7 +279,7 @@ int shell_environment(char **args) {
 
     if (args[1] == NULL) {
         char *environment[] = {"environment", NULL};
-        return launch_process(environment);
+        return launch_process((char *) environment);
 
     } else {
         if (putenv(args[1]) != 0) {
@@ -232,9 +314,9 @@ int (*internal_functions[])(char **) =
                 &pause_command,
         };
 
-
 //CHECK IF INPUTTED COMMAND IS INTERNAL
 int check_internal(char* argv[]) {
+
     int i;
 
     for (i = 0; i < sizeof(internal_commands) / sizeof(internal_commands[0]); i++) { //iterate through all the internal commands to see if the input matches one of them
@@ -246,9 +328,9 @@ int check_internal(char* argv[]) {
     return 0; //return false otherwise
 }
 
-
 //RUN INTERNAL COMMAND
 int run_internal_command(char* argv[ARGUMENT_SIZE]) {
+
     int i;
 
     for (i = 0; i < COMMAND_SIZE; i++) { //iterate through all the internal commands
@@ -260,24 +342,49 @@ int run_internal_command(char* argv[ARGUMENT_SIZE]) {
     return 0;
 }
 
-//FORKING
-pid_t Fork(void) {
-    pid_t pid;
+/*
+ *
+ */
 
-    if ((pid = fork()) < 0) {
+//FORK PROCESS
+void fork_command(char* argv[ARGUMENT_SIZE], int isBackground) {
+
+    pid_t pid;
+    pid = fork();
+
+    if (pid < 0) {  //handle error
         write(STDERR_FILENO, error_message, strlen(error_message));
-        exit(EXIT_FAILURE);
     }
 
-    return pid;
-}
+    else if (pid == 0) { //child process
 
+        if (execvp(argv[0], argv) < 0) {
+
+            write(STDERR_FILENO, error_message, strlen(error_message)); //handle error
+            exit(0);
+
+        }
+
+        write(STDERR_FILENO, error_message, strlen(error_message));
+
+    }
+
+    else if (pid > 0 && isBackground == 0) { //parent process with no background
+
+        int status; //wait status for parent
+
+        if (waitpid(pid, &status, 0) < 0) { //handle error
+            write(STDERR_FILENO, error_message, strlen(error_message));
+        }
+
+    }
+
+}
 
 //REDIRECTION
 void redirect(char* argv[ARGUMENT_SIZE], int flag, int i) {
 
     int j = i; //iterate through input starting from the necessary token
-    int in, out; //hold states of stdin and stdout
     pid_t pid; //fork process
 
     int saved_read = dup(0); //save the read side
@@ -329,7 +436,6 @@ void redirect(char* argv[ARGUMENT_SIZE], int flag, int i) {
     dup2(saved_write, 1); //restore out
     close(saved_write); //close out
 }
-
 
 //CHECK FOR REDIRECTION
 int check_redirect(char* argv[ARGUMENT_SIZE], int isBackground) {
@@ -406,8 +512,6 @@ void run_pipe(char* left[ARGUMENT_SIZE], char* right[ARGUMENT_SIZE], int isBackg
     int fd[2]; //read and write end of the pipe
     pid_t pid; //child process 1
     pid_t pid2; //child process 2
-    int saved_read = dup(0); //save state of read
-    int saved_write = dup(1); //save state of write
 
     pipe(fd); //pipe read and write end
     pid = fork(); //fork process
