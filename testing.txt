@@ -1,1 +1,23 @@
+PROBLEM SOLVING:
+    For this lab, I solved the problem by implementing functions that break up each of the shell's tasks. I
+implemented a main loop that reads input endlessly until the user types "quit". I implemented a function
+to print the current working directory using the command gethostname(). I used fgets() to read input from
+user, and then I created a function called parse_input to parse the raw input into string tokens. I built
+a function launch_process that takes the user input and evaluates it to run the proper command. To change
+the directory, I used getcwd(). To clear the display, I used the ANSI terminal control escape sequences.
+To list the contents of a directory, I called struct dirent *reader, and used opendir("./") to open the
+directory. To list the environment strings, I wrote a for loop that iterates through & prints out all the
+environment strings. To display a comment, I wrote a while loop that prints array strings of the argument.
+To display the user manual, I used "more". To pause the shell, I used getchar() to pause running until the
+user presses "Enter". To quit the shell, I used strcmp() to quit running if the user types "quit". I wrote
+a function to check if the inputted command is an internal one, and if it is, then I run another function I
+wrote to run the internal commands. Otherwise, the shell uses the fork_command(). I wrote a function to check
+if the command requires redirection, and another function to check if the command contains pipes. Respectively,
+I wrote a function that runs redirection, and another function that runs the pipe process.
 
+TESTING:
+    I used the following commands to test my shell, along with other similar commands to check that all the
+    internal commands, forked and execed commands, redirected input, and piping input, worked.
+        ls -la > out.txt
+        cat < out.txt > out2.txt
+        ls -la | grep main.c
