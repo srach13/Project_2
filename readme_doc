@@ -1,1 +1,47 @@
+myshell User Manual
 
+Description:
+myshell is an implementation of a simple Unix/Linux shell. The shell operates by printing
+a prompt, reading a command inputted by the user, creating a child process that executes
+the command, and then continuing to prompt for user input.
+
+The shell can be invoked in one of two ways: no arguments or a single argument.
+
+No Arguments:
+In this mode, called interactive mode, the user is able to type commands directly.
+
+Single Argument:
+In this mode, called bach mode, the shell reads input from a batch file and executes
+commands found in the file.
+
+Internal Commands:
+The shell supports some internal commands. Their commands and respective actions are
+listed below.
+
+cd <directory>: changes the current default directory
+clr: clears the screen
+dir <directory>: lists the contents of directory
+environ: lists all the environment strings
+echo <comment>: displays comment
+help: displays user manual
+pause: pauses shell until user presses 'Enter'
+quit: quits the shell
+
+Forking and Execing:
+If the user does not type one of the above internal commands, then their input is
+interpreted as program invocation, done by the shell forking and execing the program as
+its own child processes.
+
+I/O Redirection:
+Redirection changes the way from where commands read input to where commands send input.
+This shell redirects standard input (stdin) and standard output (stdout). The shell redirects
+into a given file.
+
+Background Execution:
+If there is an ampersand (&) at the end of the command line, this indicates that the shell
+should return to the command line prompt immediately after launching that program.
+
+Pipes:
+Piping is an extension of redirection where commands are strung together using '|'. For
+example, the shell will support something like the following
+    cat out.txt | wc -l

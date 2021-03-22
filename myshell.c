@@ -6,6 +6,8 @@
 #include <dirent.h>
 #include <stdbool.h>
 #include <fcntl.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
 //DECLARATIONS
 #define ARGUMENT_SIZE 1024 //size of input buffer
